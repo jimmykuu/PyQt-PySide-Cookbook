@@ -1,4 +1,6 @@
-PyQt-PySide-Cookbook
+PyQt/PySide Cookbook
 ====================
 
-PyQt/PySide案例集
+该项目主要用于收集PyQt/PySide开发中碰到的问题的解决方案，以及一些案例。
+
+主要代码说话，解决问题为主，少讲或不讲原理。
