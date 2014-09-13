@@ -16,5 +16,6 @@
 * [打包发布](README.md)
 * [StyleSheet](stylesheet/README.md)
 * [Designer](designer/README.md)
-* [Graphics View](graphics_view/README)
+   * [Promoted Widgets](designer/promoted_widgets.md)
+* [Graphics View](graphics_view/README.md)
 

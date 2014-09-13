@@ -4,7 +4,7 @@
     <head>
         
         <meta charset="UTF-8">
-        <title>Widget | PyQt/PySide Cookbook</title>
+        <title>带overflow效果的按钮 | PyQt/PySide Cookbook</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="generator" content="GitBook 1.0.3">
@@ -18,10 +18,10 @@
     
     
     
-    <link rel="next" href="../widget/css_overflowlabel.html" />
+    <link rel="next" href="../list/README.html" />
     
     
-    <link rel="prev" href="../signal-and-slot/dynamical-create-a-series-of-widget-and-binding-signal-and-slot.html" />
+    <link rel="prev" href="../widget/README.html" />
     
 
         
@@ -33,7 +33,7 @@
 
 
         
-    <div class="book"  data-level="3" data-basepath=".." data-revision="1410629467273">
+    <div class="book"  data-level="3.1" data-basepath=".." data-revision="1410629467273">
     
 
 <div class="book-summary">
@@ -119,7 +119,7 @@
         </li>
     
         
-        <li class="chapter active" data-level="3" data-path="widget/README.html">
+        <li class="chapter " data-level="3" data-path="widget/README.html">
             
                 
                     <a href="../widget/README.html">
@@ -136,7 +136,7 @@
                 
     
         
-        <li class="chapter " data-level="3.1" data-path="widget/css_overflowlabel.html">
+        <li class="chapter active" data-level="3.1" data-path="widget/css_overflowlabel.html">
             
                 
                     <a href="../widget/css_overflowlabel.html">
@@ -455,9 +455,57 @@
                 <div class="page-inner">
                 
                 
-                    <section class="normal" id="section-gitbook_2810">
+                    <section class="normal" id="section-gitbook_2811">
                     
-                        <h1 id="widget">Widget</h1>
+                        <h1 id="overflow">带overflow效果的按钮</h1>
+<p>想实现的效果是，当QPushButton上的label过长的时候，自动把过长的部分...类似css里的overflow效果</p>
+<p><img src="img/elide_button.gif" alt="elide_button"></p>
+<p>代码如下：</p>
+<pre><code class="lang-python"><span class="hljs-comment">#!/usr/bin/env python2</span>
+<span class="hljs-keyword">import</span> os
+<span class="hljs-keyword">import</span> sys
+<span class="hljs-keyword">from</span> PyQt4 <span class="hljs-keyword">import</span> QtGui, QtCore
+<span class="hljs-keyword">from</span> PyQt4.QtCore <span class="hljs-keyword">import</span> Qt, QString
+
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ElideButton</span><span class="hljs-params">(QtGui.QPushButton)</span>:</span>
+
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">__init__</span><span class="hljs-params">(self, parent=None)</span>:</span>
+
+        super(ElideButton, self).__init__(parent)
+        font = self.font()
+        font.setPointSize(<span class="hljs-number">10</span>)
+        self.setFont(font)
+
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">paintEvent</span><span class="hljs-params">(self, event)</span>:</span>
+        painter = QtGui.QStylePainter(self)
+
+        metrics = QtGui.QFontMetrics(self.font())
+        elided = metrics.elidedText(self.text(), Qt.ElideRight, self.width())
+
+        option = QtGui.QStyleOptionButton()
+        self.initStyleOption(option)
+        option.text = <span class="hljs-string">''</span>
+        painter.drawControl(QtGui.QStyle.CE_PushButton, option)
+        painter.drawText(self.rect(), Qt.AlignLeft | Qt.AlignVCenter, elided)
+
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">TheUI</span><span class="hljs-params">(QtGui.QDialog)</span>:</span>
+
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">__init__</span><span class="hljs-params">(self, args=None, parent=None)</span>:</span>
+        super(TheUI, self).__init__(parent)
+        self.layout = QtGui.QVBoxLayout(self)
+        self.button = ElideButton(<span class="hljs-string">'Oh Yeah This is a super long string'</span>)
+        self.layout.addWidget(self.button)
+        self.setMinimumWidth(<span class="hljs-number">20</span>)
+
+<span class="hljs-keyword">if</span> __name__ == <span class="hljs-string">'__main__'</span>:
+    app = QtGui.QApplication(sys.argv)
+    gui = TheUI()
+    gui.show()
+    app.exec_()
+</code></pre>
+<p>其实这个例子有个小缺陷，label左侧应该有些空隙（由style决定的）但是此处没有继承到。</p>
 
                     
                     </section>
@@ -468,10 +516,10 @@
         </div>
 
         
-        <a href="../signal-and-slot/dynamical-create-a-series-of-widget-and-binding-signal-and-slot.html" class="navigation navigation-prev " aria-label="Previous page: 动态创建一系列组件并绑定信号和槽"><i class="fa fa-angle-left"></i></a>
+        <a href="../widget/README.html" class="navigation navigation-prev " aria-label="Previous page: Widget"><i class="fa fa-angle-left"></i></a>
         
         
-        <a href="../widget/css_overflowlabel.html" class="navigation navigation-next " aria-label="Next page: 带overflow效果的按钮"><i class="fa fa-angle-right"></i></a>
+        <a href="../list/README.html" class="navigation navigation-next " aria-label="Next page: List Widget"><i class="fa fa-angle-right"></i></a>
         
     </div>
 </div>
