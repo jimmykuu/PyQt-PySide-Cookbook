@@ -4,7 +4,7 @@
     <head>
         
         <meta charset="UTF-8">
-        <title>信号和槽 | PyQt/PySide Cookbook</title>
+        <title>同时勾选多个items | PyQt/PySide Cookbook</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="generator" content="GitBook 1.0.3">
@@ -18,10 +18,10 @@
     
     
     
-    <link rel="next" href="../signal-and-slot/dynamical-create-a-series-of-widget-and-binding-signal-and-slot.html" />
+    <link rel="next" href="../tree/README.html" />
     
     
-    <link rel="prev" href="../reame.html" />
+    <link rel="prev" href="../list/list_widget.html" />
     
 
         
@@ -33,7 +33,7 @@
 
 
         
-    <div class="book"  data-level="2" data-basepath=".." data-revision="1410612732650">
+    <div class="book"  data-level="4.2" data-basepath=".." data-revision="1410612732650">
     
 
 <div class="book-summary">
@@ -81,7 +81,7 @@
         </li>
     
         
-        <li class="chapter active" data-level="2" data-path="signal-and-slot/README.html">
+        <li class="chapter " data-level="2" data-path="signal-and-slot/README.html">
             
                 
                     <a href="../signal-and-slot/README.html">
@@ -168,7 +168,7 @@
         </li>
     
         
-        <li class="chapter " data-level="4.2" data-path="list/article.html">
+        <li class="chapter active" data-level="4.2" data-path="list/article.html">
             
                 
                     <a href="../list/article.html">
@@ -411,9 +411,117 @@
                 <div class="page-inner">
                 
                 
-                    <section class="normal" id="section-gitbook_48">
+                    <section class="normal" id="section-gitbook_45">
                     
-                        <h1 id="">信号和槽</h1>
+                        <h1 id="items">同时勾选多个items</h1>
+<p>框选多个item之后，用空格键可以勾选/去选多个item，效果如下图所示：</p>
+<p><img src="img/checkbox_multi_toggle.gif" alt="img"></p>
+<p>方法是reimplement keyPressEvent，只要按键是空格键，就勾选/去选选择了的items，代码如下</p>
+<pre><code class="lang-python"><span class="hljs-keyword">from</span> PyQt4 <span class="hljs-keyword">import</span> QtGui, QtCore
+<span class="hljs-keyword">from</span> PyQt4.QtCore <span class="hljs-keyword">import</span> Qt, QString
+<span class="hljs-keyword">import</span> sys
+<span class="hljs-keyword">import</span> os
+
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ThumbListWidget</span><span class="hljs-params">(QtGui.QListWidget)</span>:</span>
+
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">__init__</span><span class="hljs-params">(self, type, parent=None)</span>:</span>
+        super(ThumbListWidget, self).__init__(parent)
+        self.setIconSize(QtCore.QSize(<span class="hljs-number">124</span>, <span class="hljs-number">124</span>))
+        self.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
+        self.setAcceptDrops(<span class="hljs-keyword">True</span>)
+        self.setSelectionRectVisible(<span class="hljs-keyword">True</span>)
+
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">keyPressEvent</span><span class="hljs-params">(self, event)</span>:</span>
+
+        <span class="hljs-keyword">if</span> event.key() == Qt.Key_Space:
+            <span class="hljs-keyword">if</span> self.selectedItems():
+                new_state = Qt.Unchecked <span class="hljs-keyword">if</span> self.selectedItems()[<span class="hljs-number">0</span>].checkState() <span class="hljs-keyword">else</span> Qt.Checked
+                <span class="hljs-keyword">for</span> item <span class="hljs-keyword">in</span> self.selectedItems():
+                    <span class="hljs-keyword">if</span> item.flags() &amp; Qt.ItemIsUserCheckable:
+                        item.setCheckState(new_state)
+
+            self.viewport().update()
+
+        <span class="hljs-keyword">elif</span> event.key() == Qt.Key_Delete:
+            <span class="hljs-keyword">for</span> item <span class="hljs-keyword">in</span> self.selectedItems():
+                self.takeItem(self.row(item))
+
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">iterAllItems</span><span class="hljs-params">(self)</span>:</span>
+        <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> range(self.count()):
+            <span class="hljs-keyword">yield</span> self.item(i)
+
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Dialog</span><span class="hljs-params">(QtGui.QMainWindow)</span>:</span>
+
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">__init__</span><span class="hljs-params">(self)</span>:</span>
+        super(QtGui.QMainWindow, self).__init__()
+        self.listItems = {}
+
+        myQWidget = QtGui.QWidget()
+        myBoxLayout = QtGui.QVBoxLayout()
+        myQWidget.setLayout(myBoxLayout)
+        self.setCentralWidget(myQWidget)
+
+        self.listWidgetA = ThumbListWidget(self)
+        <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> range(<span class="hljs-number">5</span>):
+            QtGui.QListWidgetItem(<span class="hljs-string">'Item '</span> + str(i + <span class="hljs-number">1</span>), self.listWidgetA)
+
+        <span class="hljs-keyword">for</span> item <span class="hljs-keyword">in</span> self.listWidgetA.iterAllItems():
+            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+            item.setCheckState(Qt.Checked)
+
+        myBoxLayout.addWidget(self.listWidgetA)
+        self.listWidgetA.setAcceptDrops(<span class="hljs-keyword">False</span>)
+        self.listWidgetA.viewport().update()
+
+<span class="hljs-keyword">if</span> __name__ == <span class="hljs-string">'__main__'</span>:
+    app = QtGui.QApplication(sys.argv)
+    dialog = Dialog()
+    dialog.show()
+    dialog.resize(<span class="hljs-number">400</span>, <span class="hljs-number">140</span>)
+    sys.exit(app.exec_())
+</code></pre>
+<p>但是还存在一个问题，希望能够在框选了多个item之后，通过单击任意一个item的checkbox，也能达到勾选/去选所有item的效果，此时可以给list widget添加如下几个method：</p>
+<pre><code class="lang-python">    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">mouseReleaseEvent</span><span class="hljs-params">(self, event)</span>:</span>
+        item = self.selectedCheckStateItem(event.pos())
+        <span class="hljs-keyword">if</span> item:
+            selectedItems = self.selectedItems()
+            new_state = Qt.Unchecked <span class="hljs-keyword">if</span> item.checkState() == Qt.Checked <span class="hljs-keyword">else</span> Qt.Checked
+            self.setSelectedCheckStates(new_state, item)
+            <span class="hljs-comment"># QtGui.QApplication.processEvents()</span>
+            self.viewport().update()
+
+        QtGui.QListWidget.mouseReleaseEvent(self, event)
+        <span class="hljs-keyword">if</span> item:
+            <span class="hljs-keyword">for</span> sel_item <span class="hljs-keyword">in</span> selectedItems:
+                sel_item.setSelected(<span class="hljs-keyword">True</span>)
+
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">setSelectedCheckStates</span><span class="hljs-params">(self, state, click_item)</span>:</span>
+        <span class="hljs-keyword">for</span> item <span class="hljs-keyword">in</span> self.selectedItems():
+            <span class="hljs-keyword">if</span> item <span class="hljs-keyword">is</span> <span class="hljs-keyword">not</span> click_item:
+                item.setCheckState(state)
+
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">selectedCheckStateItem</span><span class="hljs-params">(self, pos)</span>:</span>
+        item = self.itemAt(pos)
+        <span class="hljs-keyword">if</span> item:
+            opt = QtGui.QStyleOptionButton()
+            opt.rect = self.visualItemRect(item)
+            rect = self.style().subElementRect(QtGui.QStyle.SE_ViewItemCheckIndicator, opt)
+            <span class="hljs-keyword">if</span> item <span class="hljs-keyword">in</span> self.selectedItems() <span class="hljs-keyword">and</span> rect.contains(pos):
+                <span class="hljs-keyword">return</span> item
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">None</span>
+</code></pre>
+<p>其原理是当鼠标按键释放时，通过在<code>selectedCheckStateItem</code>中判断释放位置是否刚好在某个item的左侧的checkbox上，如果是，则返回此item，否则返回None。</p>
+<p>如果确实鼠标按键在某个item左侧的checkbox上释放了，那就拿到他现在的勾选状态，然后相应的勾选/去选当前所有选中的items。</p>
+<p><strong>Note:</strong></p>
+<ul>
+<li>解决问题的关键点是<pre><code class="lang-python">opt = QtGui.QStyleOptionButton()
+opt.rect = self.visualItemRect(item)
+rect = self.style().subElementRect(QtGui.QStyle.SE_ViewItemCheckIndicator, opt)
+</code></pre>
+此3行代码得到的是某个item的左侧的checkbox所占据的rect。</li>
+</ul>
 
                     
                     </section>
@@ -424,10 +532,10 @@
         </div>
 
         
-        <a href="../reame.html" class="navigation navigation-prev " aria-label="Previous page: 资源和翻译"><i class="fa fa-angle-left"></i></a>
+        <a href="../list/list_widget.html" class="navigation navigation-prev " aria-label="Previous page: 遍历List Widget"><i class="fa fa-angle-left"></i></a>
         
         
-        <a href="../signal-and-slot/dynamical-create-a-series-of-widget-and-binding-signal-and-slot.html" class="navigation navigation-next " aria-label="Next page: 动态创建一系列组件并绑定信号和槽"><i class="fa fa-angle-right"></i></a>
+        <a href="../tree/README.html" class="navigation navigation-next " aria-label="Next page: Tree"><i class="fa fa-angle-right"></i></a>
         
     </div>
 </div>
