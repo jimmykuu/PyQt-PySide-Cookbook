@@ -5,7 +5,9 @@
 
 方法是reimplement keyPressEvent，只要按键是空格键，就勾选/去选选择了的items，代码如下
 
-```python
+```
+```python```
+
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt, QString
 import sys

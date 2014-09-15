@@ -4,7 +4,7 @@
     <head>
         
         <meta charset="UTF-8">
-        <title>Widget | PyQt/PySide Cookbook</title>
+        <title>遍历List Widget | PyQt/PySide Cookbook</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="generator" content="GitBook 1.0.3">
@@ -18,10 +18,10 @@
     
     
     
-    <link rel="next" href="../widget/31qmenu.html" />
+    <link rel="next" href="../list/article.html" />
     
     
-    <link rel="prev" href="../signal-and-slot/dynamical-create-a-series-of-widget-and-binding-signal-and-slot.html" />
+    <link rel="prev" href="../list/README.html" />
     
 
         
@@ -33,7 +33,7 @@
 
 
         
-    <div class="book"  data-level="3" data-basepath=".." data-revision="1410766565469">
+    <div class="book"  data-level="4.1" data-basepath=".." data-revision="1410766565469">
     
 
 <div class="book-summary">
@@ -119,7 +119,7 @@
         </li>
     
         
-        <li class="chapter active" data-level="3" data-path="widget/README.html">
+        <li class="chapter " data-level="3" data-path="widget/README.html">
             
                 
                     <a href="../widget/README.html">
@@ -174,7 +174,7 @@
                 
     
         
-        <li class="chapter " data-level="4.1" data-path="list/list_widget.html">
+        <li class="chapter active" data-level="4.1" data-path="list/list_widget.html">
             
                 
                     <a href="../list/list_widget.html">
@@ -433,9 +433,23 @@
                 <div class="page-inner">
                 
                 
-                    <section class="normal" id="section-gitbook_1021">
+                    <section class="normal" id="section-gitbook_1012">
                     
-                        <h1 id="widget">Widget</h1>
+                        <h1 id="list-widget">遍历List Widget</h1>
+<p>最直接的方法如下：</p>
+<pre><code class="lang-python">items = []
+<span class="hljs-keyword">for</span> index <span class="hljs-keyword">in</span> xrange(self.listWidget.count()):
+     items.append(self.listWidget.item(index))
+</code></pre>
+<p>但是这样很不pythonic，基于一般越短的代码就是越正确的代码的原理，可以像下面这样：</p>
+<pre><code class="lang-python">all_items = self.listWidgetA.findItems(QString(<span class="hljs-string">'*'</span>), Qt.MatchWrap | Qt.MatchWildcard)
+</code></pre>
+<p>但是这相当于把所有的items全部存到一个list里面了，会费资源，还是不好。</p>
+<p>可以考虑如下方式，在listWidget的subclass里定义一个iterAllItems method,其实他是一个generator。</p>
+<pre><code class="lang-python"><span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">iterAllItems</span><span class="hljs-params">(self)</span>:</span>
+    <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> range(self.count()):
+        <span class="hljs-keyword">yield</span> self.item(i)
+</code></pre>
 
                     
                     </section>
@@ -446,10 +460,10 @@
         </div>
 
         
-        <a href="../signal-and-slot/dynamical-create-a-series-of-widget-and-binding-signal-and-slot.html" class="navigation navigation-prev " aria-label="Previous page: 动态创建一系列组件并绑定信号和槽"><i class="fa fa-angle-left"></i></a>
+        <a href="../list/README.html" class="navigation navigation-prev " aria-label="Previous page: List Widget"><i class="fa fa-angle-left"></i></a>
         
         
-        <a href="../widget/31qmenu.html" class="navigation navigation-next " aria-label="Next page: QAction"><i class="fa fa-angle-right"></i></a>
+        <a href="../list/article.html" class="navigation navigation-next " aria-label="Next page: 同时勾选多个items"><i class="fa fa-angle-right"></i></a>
         
     </div>
 </div>

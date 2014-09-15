@@ -4,7 +4,7 @@
     <head>
         
         <meta charset="UTF-8">
-        <title>Widget | PyQt/PySide Cookbook</title>
+        <title>同时勾选多个items | PyQt/PySide Cookbook</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="generator" content="GitBook 1.0.3">
@@ -18,10 +18,10 @@
     
     
     
-    <link rel="next" href="../widget/31qmenu.html" />
+    <link rel="next" href="../tree/README.html" />
     
     
-    <link rel="prev" href="../signal-and-slot/dynamical-create-a-series-of-widget-and-binding-signal-and-slot.html" />
+    <link rel="prev" href="../list/list_widget.html" />
     
 
         
@@ -33,7 +33,7 @@
 
 
         
-    <div class="book"  data-level="3" data-basepath=".." data-revision="1410766565469">
+    <div class="book"  data-level="4.2" data-basepath=".." data-revision="1410766565469">
     
 
 <div class="book-summary">
@@ -119,7 +119,7 @@
         </li>
     
         
-        <li class="chapter active" data-level="3" data-path="widget/README.html">
+        <li class="chapter " data-level="3" data-path="widget/README.html">
             
                 
                     <a href="../widget/README.html">
@@ -190,7 +190,7 @@
         </li>
     
         
-        <li class="chapter " data-level="4.2" data-path="list/article.html">
+        <li class="chapter active" data-level="4.2" data-path="list/article.html">
             
                 
                     <a href="../list/article.html">
@@ -433,9 +433,110 @@
                 <div class="page-inner">
                 
                 
-                    <section class="normal" id="section-gitbook_1021">
+                    <section class="normal" id="section-gitbook_1009">
                     
-                        <h1 id="widget">Widget</h1>
+                        <h1 id="items">同时勾选多个items</h1>
+<p>框选多个item之后，用空格键可以勾选/去选多个item，效果如下图所示：</p>
+<p><img src="img/checkbox_multi_toggle.gif" alt="img"></p>
+<p>方法是reimplement keyPressEvent，只要按键是空格键，就勾选/去选选择了的items，代码如下</p>
+<pre><code>```python
+</code></pre><p>from PyQt4 import QtGui, QtCore
+from PyQt4.QtCore import Qt, QString
+import sys
+import os</p>
+<p>class ThumbListWidget(QtGui.QListWidget):</p>
+<pre><code>def __init__(self, type, parent=None):
+    super(ThumbListWidget, self).__init__(parent)
+    self.setIconSize(QtCore.QSize(124, 124))
+    self.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
+    self.setAcceptDrops(True)
+    self.setSelectionRectVisible(True)
+
+def keyPressEvent(self, event):
+
+    if event.key() == Qt.Key_Space:
+        if self.selectedItems():
+            new_state = Qt.Unchecked if self.selectedItems()[0].checkState() else Qt.Checked
+            for item in self.selectedItems():
+                if item.flags() &amp; Qt.ItemIsUserCheckable:
+                    item.setCheckState(new_state)
+
+        self.viewport().update()
+
+    elif event.key() == Qt.Key_Delete:
+        for item in self.selectedItems():
+            self.takeItem(self.row(item))
+
+def iterAllItems(self):
+    for i in range(self.count()):
+        yield self.item(i)
+</code></pre><p>class Dialog(QtGui.QMainWindow):</p>
+<pre><code>def __init__(self):
+    super(QtGui.QMainWindow, self).__init__()
+    self.listItems = {}
+
+    myQWidget = QtGui.QWidget()
+    myBoxLayout = QtGui.QVBoxLayout()
+    myQWidget.setLayout(myBoxLayout)
+    self.setCentralWidget(myQWidget)
+
+    self.listWidgetA = ThumbListWidget(self)
+    for i in range(5):
+        QtGui.QListWidgetItem(&#39;Item &#39; + str(i + 1), self.listWidgetA)
+
+    for item in self.listWidgetA.iterAllItems():
+        item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+        item.setCheckState(Qt.Checked)
+
+    myBoxLayout.addWidget(self.listWidgetA)
+    self.listWidgetA.setAcceptDrops(False)
+    self.listWidgetA.viewport().update()
+</code></pre><p>if <strong>name</strong> == &#39;<strong>main</strong>&#39;:
+    app = QtGui.QApplication(sys.argv)
+    dialog = Dialog()
+    dialog.show()
+    dialog.resize(400, 140)
+    sys.exit(app.exec_())</p>
+<pre><code>但是还存在一个问题，希望能够在框选了多个item之后，通过单击任意一个item的checkbox，也能达到勾选/去选所有item的效果，此时可以给list widget添加如下几个method：
+```python
+    def mouseReleaseEvent(self, event):
+        item = self.selectedCheckStateItem(event.pos())
+        if item:
+            selectedItems = self.selectedItems()
+            new_state = Qt.Unchecked if item.checkState() == Qt.Checked else Qt.Checked
+            self.setSelectedCheckStates(new_state, item)
+            # QtGui.QApplication.processEvents()
+            self.viewport().update()
+
+        QtGui.QListWidget.mouseReleaseEvent(self, event)
+        if item:
+            for sel_item in selectedItems:
+                sel_item.setSelected(True)
+
+    def setSelectedCheckStates(self, state, click_item):
+        for item in self.selectedItems():
+            if item is not click_item:
+                item.setCheckState(state)
+
+    def selectedCheckStateItem(self, pos):
+        item = self.itemAt(pos)
+        if item:
+            opt = QtGui.QStyleOptionButton()
+            opt.rect = self.visualItemRect(item)
+            rect = self.style().subElementRect(QtGui.QStyle.SE_ViewItemCheckIndicator, opt)
+            if item in self.selectedItems() and rect.contains(pos):
+                return item
+        return None
+</code></pre><p>其原理是当鼠标按键释放时，通过在<code>selectedCheckStateItem</code>中判断释放位置是否刚好在某个item的左侧的checkbox上，如果是，则返回此item，否则返回None。</p>
+<p>如果确实鼠标按键在某个item左侧的checkbox上释放了，那就拿到他现在的勾选状态，然后相应的勾选/去选当前所有选中的items。</p>
+<p><strong>Note:</strong></p>
+<ul>
+<li>解决问题的关键点是<pre><code class="lang-python">opt = QtGui.QStyleOptionButton()
+opt.rect = self.visualItemRect(item)
+rect = self.style().subElementRect(QtGui.QStyle.SE_ViewItemCheckIndicator, opt)
+</code></pre>
+此3行代码得到的是某个item的左侧的checkbox所占据的rect。</li>
+</ul>
 
                     
                     </section>
@@ -446,10 +547,10 @@
         </div>
 
         
-        <a href="../signal-and-slot/dynamical-create-a-series-of-widget-and-binding-signal-and-slot.html" class="navigation navigation-prev " aria-label="Previous page: 动态创建一系列组件并绑定信号和槽"><i class="fa fa-angle-left"></i></a>
+        <a href="../list/list_widget.html" class="navigation navigation-prev " aria-label="Previous page: 遍历List Widget"><i class="fa fa-angle-left"></i></a>
         
         
-        <a href="../widget/31qmenu.html" class="navigation navigation-next " aria-label="Next page: QAction"><i class="fa fa-angle-right"></i></a>
+        <a href="../tree/README.html" class="navigation navigation-next " aria-label="Next page: Tree"><i class="fa fa-angle-right"></i></a>
         
     </div>
 </div>

@@ -4,7 +4,7 @@
     <head>
         
         <meta charset="UTF-8">
-        <title>Widget | PyQt/PySide Cookbook</title>
+        <title>QAction | PyQt/PySide Cookbook</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="generator" content="GitBook 1.0.3">
@@ -18,10 +18,10 @@
     
     
     
-    <link rel="next" href="../widget/31qmenu.html" />
+    <link rel="next" href="../list/README.html" />
     
     
-    <link rel="prev" href="../signal-and-slot/dynamical-create-a-series-of-widget-and-binding-signal-and-slot.html" />
+    <link rel="prev" href="../widget/README.html" />
     
 
         
@@ -33,7 +33,7 @@
 
 
         
-    <div class="book"  data-level="3" data-basepath=".." data-revision="1410766565469">
+    <div class="book"  data-level="3.1" data-basepath=".." data-revision="1410766565469">
     
 
 <div class="book-summary">
@@ -119,7 +119,7 @@
         </li>
     
         
-        <li class="chapter active" data-level="3" data-path="widget/README.html">
+        <li class="chapter " data-level="3" data-path="widget/README.html">
             
                 
                     <a href="../widget/README.html">
@@ -136,7 +136,7 @@
                 
     
         
-        <li class="chapter " data-level="3.1" data-path="widget/31qmenu.html">
+        <li class="chapter active" data-level="3.1" data-path="widget/31qmenu.html">
             
                 
                     <a href="../widget/31qmenu.html">
@@ -433,9 +433,124 @@
                 <div class="page-inner">
                 
                 
-                    <section class="normal" id="section-gitbook_1021">
+                    <section class="normal" id="section-gitbook_1020">
                     
-                        <h1 id="widget">Widget</h1>
+                        <h1 id="31qaction">3.1.QAction</h1>
+<p>类似maya里的下拉菜单</p>
+<p><img src="img/maya.png" alt="img"></p>
+<pre><code class="lang-python"><span class="hljs-keyword">import</span> os
+<span class="hljs-keyword">import</span> sys
+
+<span class="hljs-keyword">from</span> PyQt4 <span class="hljs-keyword">import</span> QtGui, QtCore
+
+MY_ICON = [
+        <span class="hljs-string">'16 16 4 1'</span>,
+        <span class="hljs-string">'  c None'</span>,
+        <span class="hljs-string">'. c #c6c4c4'</span>,
+        <span class="hljs-string">'l c #888888'</span>,
+        <span class="hljs-string">': c #909090'</span>,
+        <span class="hljs-string">'                '</span>,
+        <span class="hljs-string">'                '</span>,
+        <span class="hljs-string">'                '</span>,
+        <span class="hljs-string">'                '</span>,
+        <span class="hljs-string">'    llllllll    '</span>,
+        <span class="hljs-string">'    l      l    '</span>,
+        <span class="hljs-string">'    l      l    '</span>,
+        <span class="hljs-string">'    l      l    '</span>,
+        <span class="hljs-string">'    l      l    '</span>,
+        <span class="hljs-string">'    l      l    '</span>,
+        <span class="hljs-string">'    l      l    '</span>,
+        <span class="hljs-string">'    l      l    '</span>,
+        <span class="hljs-string">'    llllllll    '</span>,
+        <span class="hljs-string">'                '</span>,
+        <span class="hljs-string">'                '</span>,
+        <span class="hljs-string">'                '</span>,
+        <span class="hljs-string">'                '</span>,
+        <span class="hljs-string">'                '</span>,
+]
+
+<span class="hljs-comment">## Custom Action used to provide an action and a clickable icon</span>
+<span class="hljs-comment">#</span>
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ExtendedQAction</span><span class="hljs-params">(QtGui.QWidgetAction)</span>:</span>
+        <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">__init__</span><span class="hljs-params">(self, label, mainAction, secondaryAction, *args, **kw)</span>:</span>
+                QtGui.QWidgetAction.__init__(self, *args, **kw)
+
+                myWidget = QtGui.QWidget()
+                myLayout = QtGui.QHBoxLayout()
+                myLayout.setSpacing( <span class="hljs-number">0</span> )
+                myLayout.setContentsMargins( <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span> )
+                myWidget.setLayout(myLayout)
+                myLabel = ExtendedQLabel(label)
+                myIcon = ExtendedQLabel()
+                myIcon.setPixmap(QtGui.QPixmap(MY_ICON))
+                myLayout.addWidget(myLabel, stretch=<span class="hljs-number">1</span>)
+                myLayout.addWidget(myIcon, stretch=<span class="hljs-number">0</span>)
+
+                <span class="hljs-comment">## Hack in the hover colors to a style sheet</span>
+                <span class="hljs-comment">#  The global stylesheet is not controlling the highlight color.</span>
+                <span class="hljs-comment">#  It would be good to figure out how to avoid hardcoding styles here.</span>
+                defaultHLBackground = <span class="hljs-string">"#%02x%02x%02x"</span> % myWidget.palette().highlight().color().getRgb()[:<span class="hljs-number">3</span>]
+                defaultHLText = <span class="hljs-string">"#%02x%02x%02x"</span> % myWidget.palette().highlightedText().color().getRgb()[:<span class="hljs-number">3</span>]
+                myLabel.setStyleSheet(<span class="hljs-string">'padding-left:14px'</span>)
+                myWidget.setStyleSheet(<span class="hljs-string">"QWidget:hover { background:%s; color: %s;} QWidget { padding: 4px; margin:0px}"</span> % (defaultHLBackground,defaultHLText))
+
+
+                myIcon.setToolTip(<span class="hljs-string">"Secondary Action Toolttip"</span> )
+
+                self.connect(myLabel, QtCore.SIGNAL(<span class="hljs-string">'clicked()'</span>), mainAction)
+                self.connect(myIcon, QtCore.SIGNAL(<span class="hljs-string">'clicked()'</span>), secondaryAction)
+
+                self.setDefaultWidget(myWidget)
+
+
+<span class="hljs-comment">## Clickable QLabel, this was the path of least resistance for making a</span>
+<span class="hljs-comment">#  clickable image/label.</span>
+<span class="hljs-comment">#</span>
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ExtendedQLabel</span><span class="hljs-params">(QtGui.QLabel)</span>:</span>
+
+        <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">__init</span><span class="hljs-params">(self, parent)</span>:</span>
+                QtGui.QLabel.__init__(self, parent)
+
+        <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">mouseReleaseEvent</span><span class="hljs-params">(self, ev)</span>:</span>
+                self.emit(QtCore.SIGNAL(<span class="hljs-string">'clicked()'</span>))
+
+
+<span class="hljs-comment">################################################################################</span>
+<span class="hljs-comment"># Usage of the dual action menu items.</span>
+<span class="hljs-comment">################################################################################</span>
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">MyMainWindow</span><span class="hljs-params">(QtGui.QMainWindow)</span>:</span>
+        <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">__init__</span><span class="hljs-params">(self, *args, **kwargs)</span>:</span>
+                QtGui.QMainWindow.__init__(self, *args, **kwargs)
+
+                regularAction = QtGui.QAction(<span class="hljs-string">'Foo'</span>, self)
+                extendedAction = ExtendedQAction(<span class="hljs-string">'Bar'</span>, self.mainAction, self.secondaryAction, self)
+                regularAction2 = QtGui.QAction(<span class="hljs-string">'Hello'</span>, self)
+                extendedAction2 = ExtendedQAction(<span class="hljs-string">'World'</span>, self.mainAction, self.secondaryAction, self)
+
+                menubar = self.menuBar()
+                myMenu = menubar.addMenu(<span class="hljs-string">'&amp;Menu'</span>)
+                myMenu.addAction(regularAction)
+                myMenu.addAction(extendedAction)
+                myMenu.addAction(regularAction2)
+                myMenu.addAction(extendedAction2)
+
+                self.setWindowTitle(<span class="hljs-string">'Fun and Games'</span>)
+
+        <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">mainAction</span><span class="hljs-params">(self)</span>:</span>
+                <span class="hljs-keyword">print</span> <span class="hljs-string">"performing main action"</span>
+
+        <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">secondaryAction</span><span class="hljs-params">(self)</span>:</span>
+                <span class="hljs-keyword">print</span> <span class="hljs-string">"performing sectiondary action"</span>
+
+<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">main</span><span class="hljs-params">()</span>:</span>
+        app = QtGui.QApplication(sys.argv)
+        funAndGames = MyMainWindow()
+        funAndGames.show()
+        sys.exit(app.exec_())
+
+<span class="hljs-keyword">if</span> __name__ == <span class="hljs-string">'__main__'</span>:
+        main()
+</code></pre>
 
                     
                     </section>
@@ -446,10 +561,10 @@
         </div>
 
         
-        <a href="../signal-and-slot/dynamical-create-a-series-of-widget-and-binding-signal-and-slot.html" class="navigation navigation-prev " aria-label="Previous page: 动态创建一系列组件并绑定信号和槽"><i class="fa fa-angle-left"></i></a>
+        <a href="../widget/README.html" class="navigation navigation-prev " aria-label="Previous page: Widget"><i class="fa fa-angle-left"></i></a>
         
         
-        <a href="../widget/31qmenu.html" class="navigation navigation-next " aria-label="Next page: QAction"><i class="fa fa-angle-right"></i></a>
+        <a href="../list/README.html" class="navigation navigation-next " aria-label="Next page: List Widget"><i class="fa fa-angle-right"></i></a>
         
     </div>
 </div>
