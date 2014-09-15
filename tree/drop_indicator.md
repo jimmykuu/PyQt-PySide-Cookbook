@@ -5,6 +5,12 @@
 
 ![custom_drop_indicator](img/custom_drop_indicator.gif)
 
+其中
+- `MyTreeView`里的`paintDropIndicator`用来自定义paint drop indicator
+- `position` function用来修改默认的插入“判定”，原始默认值是2,显然`margin*2`必须小于行高，不然“恰好”放在item上的判定就没法发生了
+- 在`dragMoveEvent`里通过position返回的“判定”，来决定表示放手位置的dropIndicatorRect的坐标
+- `dropEvent`就是把c++版直接翻译了下，应该需要继续改进，很多地方不是python里的恰当写法
+
 代码如下
 ```python
 #!/usr/bin/env python2
@@ -287,7 +293,7 @@ class TheUI(QtGui.QDialog):
                                          }
                                          ''')
 
-        self.resize(500, 500)
+        self.resize(500, 350)
         for i in xrange(6):
             item = self.addCmd(i)
             if i in (3, 4):
@@ -329,3 +335,5 @@ if __name__ == '__main__':
     gui.show()
     app.exec_()
 ```
+
+
