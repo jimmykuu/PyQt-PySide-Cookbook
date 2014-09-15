@@ -1,7 +1,7 @@
 # 自定义drop indicator
 想实现如下的效果:
 - 加粗的drop indicator
-- 修改插入的“判定”灵敏度
+- 修改插入的“判定”灵敏度(这一点很重要，因为默认判定是2px，很难轻松的把拖拽的item“插入”两行之间)
 
 ![custom_drop_indicator](img/custom_drop_indicator.gif)
 

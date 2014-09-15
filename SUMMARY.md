@@ -13,6 +13,7 @@
 * [Tree](tree/README.md)
    * [半透明效果拖拽](tree/article.md)
    * [自定义drop indicator](tree/drop_indicator.md)
+   * [拖拽带itemWidget的treeWidgetItem](tree/article.md)
 * [Table](table/README.md)
 * [对话框](README.md)
 * [打包发布](README.md)
