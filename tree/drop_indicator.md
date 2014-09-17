@@ -1,73 +1,26 @@
-# 拖拽带itemWidget的treeWidgetItem
+# 自定义drop indicator
+想实现如下的效果:
+- 加粗的drop indicator
+- 修改插入的“判定”灵敏度(这一点很重要，因为默认判定是2px，很难轻松的把拖拽的item“插入”两行之间)
 
-如果你在QTreeWidget的item上了itemWidget，你会发现拖放之后,itemWidget就消失了，这是“正常现象“，因为按照qt文档的[描述](http://qt-project.org/doc/qt-4.8/qtreewidget.html#setItemWidget)，这个`setItemWidget`只能用来显示静态widet。
+![custom_drop_indicator](img/custom_drop_indicator.gif)
 
-这里想了一个绕过的方法：给每个custom widget都写一个`clone` method,使其 返回一个和自己当前状态完全一样的新的instance，然后在TreeWidget的dropEvent里调用这个`clone` method，drop之前把"clone"出来的emWidget存在list里，drop之后再setItemWidget回去。
+其中
+- `MyTreeView`里的`paintDropIndicator`用来自定义paint drop indicator
+- `position` function用来修改默认的插入“判定”，原始默认值是2,显然`margin*2`必须小于行高，不然“恰好”放在item上的判定就没法发生了
+- 在`dragMoveEvent`里通过position返回的“判定”，来决定表示放手位置的dropIndicatorRect的坐标
+- `dropEvent`就是把c++版直接翻译了下，应该需要继续改进，很多地方不是python里的恰当写法
 
-
-![itemWidget_dragging](img/itemWidget_dragging.gif)
-
-
-下面的代码包含了前一节的[自定义drop indicator](drop_indicator.md)的效果
-
+代码如下
 ```python
 #!/usr/bin/env python2
+
 import os
 import sys
 import re
 
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt, QString
-
-
-class MyWidget(QtGui.QDialog):
-
-    def __init__(self, parent=None, val=None):
-        super(MyWidget, self).__init__()
-        self.layout = QtGui.QHBoxLayout(self)
-        browseBtn = ElideButton(parent)
-        browseBtn.setMinimumSize(QtCore.QSize(0, 25))
-        browseBtn.setText(QString(val))
-        browseBtn.setStyleSheet("text-align: left")
-        self.layout.addWidget(browseBtn)
-        self.browseBtn = browseBtn
-        self.browseBtn.clicked.connect(self.browseCommandScript)
-        self.browseBtn.setIconSize(QtCore.QSize(64, 64))
-
-    def browseCommandScript(self):
-        script = QtGui.QFileDialog.getOpenFileName(
-            self, 'Select Script file', '/tmp/crap', "Executable Files (*)")
-        if script:
-            self._script = script
-            old_text = str(self.browseBtn.text()).strip()
-            old_text = re.search('^script [\d-]*', old_text).group()
-            self.browseBtn.setText(('%s %s' % (old_text, script)))
-
-    def clone(self):
-        clone = MyWidget(val=str(self.browseBtn.text()))
-        return clone
-
-
-class ElideButton(QtGui.QPushButton):
-
-    def __init__(self, parent=None):
-
-        super(ElideButton, self).__init__(parent)
-        font = self.font()
-        font.setPointSize(10)
-        self.setFont(font)
-
-    def paintEvent(self, event):
-        painter = QtGui.QStylePainter(self)
-
-        metrics = QtGui.QFontMetrics(self.font())
-        elided = metrics.elidedText(self.text(), Qt.ElideRight, self.width())
-
-        option = QtGui.QStyleOptionButton()
-        self.initStyleOption(option)
-        option.text = ''
-        painter.drawControl(QtGui.QStyle.CE_PushButton, option)
-        painter.drawText(self.rect(), Qt.AlignLeft | Qt.AlignVCenter, elided)
 
 
 class MyTreeView(QtGui.QTreeView):
@@ -90,32 +43,25 @@ class MyTreeView(QtGui.QTreeView):
             opt.rect = self.dropIndicatorRect
             rect = opt.rect
 
+            brush = QtGui.QBrush(QtGui.QColor(Qt.black))
+
             if rect.height() == 0:
-                pen = QtGui.QPen(QtCore.Qt.black, 1, QtCore.Qt.DashLine)
+                pen = QtGui.QPen(brush, 2, QtCore.Qt.SolidLine)
                 painter.setPen(pen)
                 painter.drawLine(rect.topLeft(), rect.topRight())
             else:
-                pen = QtGui.QPen(QtCore.Qt.black, 1, QtCore.Qt.DashLine)
+                pen = QtGui.QPen(brush, 2, QtCore.Qt.SolidLine)
                 painter.setPen(pen)
                 painter.drawRect(rect)
 
 
 class MyTreeWidget(QtGui.QTreeWidget, MyTreeView):
 
-    # def mouseMoveEvent(self, e):
-    #     if self.state()==QtGui.QAbstractItemView.DraggingState:
-    #         mimeData = self.model().mimeData(self.selectedIndexes())
-    #         drag = QtGui.QDrag(self)
-    #         drag.setMimeData(mimeData)
-    #         drag.exec_(QtCore.Qt.MoveAction)
-
     def startDrag(self, supportedActions):
         listsQModelIndex = self.selectedIndexes()
         if listsQModelIndex:
             mimeData = QtCore.QMimeData()
             dataQMimeData = self.model().mimeData(listsQModelIndex)
-            # if not dataQMimeData:
-            #     return None
             dragQDrag = QtGui.QDrag(self)
             # dragQDrag.setPixmap(QtGui.QPixmap('test.jpg')) # <- For put your custom image here
             dragQDrag.setMimeData(dataQMimeData)
@@ -129,11 +75,12 @@ class MyTreeWidget(QtGui.QTreeWidget, MyTreeView):
         item = self.itemAt(pos)
 
         if item:
-            index = self.indexFromItem(item)
+            index = self.indexFromItem(item)  # this always get the default 0 column index
 
             rect = self.visualRect(index)
             rect_left = self.visualRect(index.sibling(index.row(), 0))
-            rect_right = self.visualRect(index.sibling(index.row(), self.columnCount() - 1))
+            rect_right = self.visualRect(index.sibling(index.row(), self.header().logicalIndex(self.columnCount() - 1)))  # in case section has been moved
+
             self.dropIndicatorPosition = self.position(event.pos(), rect, index)
 
             if self.dropIndicatorPosition == self.AboveItem:
@@ -142,7 +89,6 @@ class MyTreeWidget(QtGui.QTreeWidget, MyTreeView):
             elif self.dropIndicatorPosition == self.BelowItem:
                 self.dropIndicatorRect = QtCore.QRect(rect_left.left(), rect_left.bottom(), rect_right.right() - rect_left.left(), 0)
                 event.accept()
-
             elif self.dropIndicatorPosition == self.OnItem:
                 self.dropIndicatorRect = QtCore.QRect(rect_left.left(), rect_left.top(), rect_right.right() - rect_left.left(), rect.height())
                 event.accept()
@@ -151,49 +97,21 @@ class MyTreeWidget(QtGui.QTreeWidget, MyTreeView):
 
             self.model().setData(index, self.dropIndicatorPosition, Qt.UserRole)
 
-            # self.setState(QtGui.QAbstractItemView.DraggingState)
         # This is necessary or else the previously drawn rect won't be erased
         self.viewport().update()
-
-    def iterativeChildren(self, nodes):
-        results = []
-        while True:
-            newNodes = []
-            if not nodes:
-                break
-            for node in nodes:
-                results.append(node)
-                for i in range(node.childCount()):
-                    print 'newNodes:', newNodes
-                    newNodes += [node.child(i)]
-            nodes = newNodes
-        results = nodes + results
-        return results
-
-    def keyPressEvent(self, event):
-        'delete currently selected item'
-        QtGui.QTreeWidget.keyPressEvent(self, event)
-        key = event.key()
-
-        if self.currentItem():
-
-            root = self.invisibleRootItem()
-            parent = self.currentItem().parent() or root
-
-            if key == Qt.Key_Delete:
-                parent.removeChild(self.currentItem())
 
     def dropEvent(self, event):
         pos = event.pos()
         item = self.itemAt(pos)
-        if item:
-            index = self.indexFromItem(item)
-            self.model().setData(index, 0, Qt.UserRole)
 
         if item is self.currentItem():
             QtGui.QTreeWidget.dropEvent(self, event)
             event.accept()
             return
+
+        if item:
+            index = self.indexFromItem(item)
+            self.model().setData(index, 0, Qt.UserRole)
 
         if event.source == self and event.dropAction() == Qt.MoveAction or self.dragDropMode() == QtGui.QAbstractItemView.InternalMove:
 
@@ -218,94 +136,49 @@ class MyTreeWidget(QtGui.QTreeWidget, MyTreeView):
                 if topIndex in indexes:
                     return
 
-                # try storing the itemWidgets first
-                # we should iterate through all child items,and store itemWidgets for them
-                widgets = []
-
                 dropRow = self.model().index(row, col, topIndex)
                 taken = []
 
                 indexes_reverse = indexes[:]
                 indexes_reverse.reverse()
-                # i = 0
+                i = 0
                 for index in indexes_reverse:
                     parent = self.itemFromIndex(index)
-                    item_widget = self.itemWidget(parent, 0)
-
-                    print 'item_widget:', item_widget, item_widget.parent()
-
-                    # item_widget.setParent(self)
-                    print 'dragging item has child:', parent.childCount()
-
-                    # print 'before dragging, child 0 ',self.itemWidget( parent.child(0),0).browseBtn.text()
-
-                    # in case it has children , we get all of them
-                    all_child = []
-
-                    all_items = self.iterativeChildren([parent])
-
-                    print 'all items:', len(all_items), all_items
-
-                    # store cloned widgets in a list
-                    widgets = [self.itemWidget(i, 0).clone() for i in all_items]
-
-                    # widgets.append(item_widget.clone())
-
                     if not parent or not parent.parent():
                         # if not parent or not isinstance(parent.parent(),QtGui.QTreeWidgetItem):
                         taken.append(self.takeTopLevelItem(index.row()))
                     else:
                         taken.append(parent.parent().takeChild(index.row()))
 
-                    # i += 1
+                    i += 1
                     # break
 
                 taken.reverse()
 
-                print 'itemWidgets:', widgets
-
                 for index in indexes:
-                    print 'inserting: topIndex:', topIndex.isValid(), row
-                    if row == -1:  # means index=root
-                        if topIndex.isValid():  # Returns the model index of the model's root item. The root item is the parent item to the view's toplevel items. The root can be invalid.
+                    if row == -1:
+                        if topIndex.isValid():
                             parent = self.itemFromIndex(topIndex)
                             parent.insertChild(parent.childCount(), taken[0])
-
-                            # after insert the itemwidget is gone
-                            # print 'after dragging, child 0 ',self.itemWidget( taken[0],0).browseBtn.text()
-
-                            # self.setItemWidget(taken[0],0,QtGui.QLineEdit())
-                            # self.setItemWidget(taken[0],0,new_widget)
-                            print 'row==-1,if',  # self.itemWidget(taken[0],0),self.itemWidget(taken[0],0).parent()
-                            # taken = taken[1:]
+                            taken = taken[1:]
 
                         else:
                             self.insertTopLevelItem(self.topLevelItemCount(), taken[0])
-                            # taken = taken[1:]
-                            print 'row==-1,else'
+                            taken = taken[1:]
                     else:
                         r = dropRow.row() if dropRow.row() >= 0 else row
                         if topIndex.isValid():
                             parent = self.itemFromIndex(topIndex)
                             parent.insertChild(min(r, parent.childCount()), taken[0])
-                            # taken = taken[1:]
-                            print 'row!=-1,if'
+                            taken = taken[1:]
                         else:
                             self.insertTopLevelItem(min(r, self.topLevelItemCount()), taken[0])
-                            # taken = taken[1:]
-                            print 'row!=-1,else'
+                            taken = taken[1:]
 
-                    all_items = self.iterativeChildren([taken[0]])
-
-                    for i, w in zip(all_items, widgets):
-                        self.setItemWidget(i, 0, w)
-
-                    taken = taken[1:]
                 event.accept()
 
         QtGui.QTreeWidget.dropEvent(self, event)
         self.expandAll()
-        self.updateGeometry()
 
     def position(self, pos, rect, index):
         r = QtGui.QAbstractItemView.OnViewport
@@ -315,6 +188,8 @@ class MyTreeWidget(QtGui.QTreeWidget, MyTreeView):
             r = QtGui.QAbstractItemView.AboveItem
         elif rect.bottom() - pos.y() < margin:
             r = QtGui.QAbstractItemView.BelowItem
+
+        # this rect is always the first column rect
         # elif rect.contains(pos, True):
         elif pos.y() - rect.top() > margin and rect.bottom() - pos.y() > margin:
             r = QtGui.QAbstractItemView.OnItem
@@ -329,8 +204,6 @@ class MyTreeWidget(QtGui.QTreeWidget, MyTreeView):
 
         if self.viewport().rect().contains(event.pos()):
             index = self.indexAt(event.pos())
-            # if drop on nothing or drop out side of index zone
-            print 'in drop on ', index, index.isValid(), self.visualRect(index).contains(event.pos())
             if not index.isValid() or not self.visualRect(index).contains(event.pos()):
                 index = root
 
@@ -373,8 +246,7 @@ class TheUI(QtGui.QDialog):
         self.layout1 = QtGui.QVBoxLayout(self)
         treeWidget = MyTreeWidget()
 
-        # treeWidget.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
-        # treeWidget.setSelectionRectVisible(True)
+        treeWidget.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
 
         button1 = QtGui.QPushButton('Add')
         button2 = QtGui.QPushButton('Add Child')
@@ -448,15 +320,10 @@ class TheUI(QtGui.QDialog):
             if parent == root:
                 i = self.treeWidget.topLevelItemCount()
             else:
-                i = str(parent.text(0)).strip()[7:]
+                i = str(parent.text(0))[7:]
                 i = '%s-%s' % (i, parent.childCount() + 1)
 
-        # item = QtGui.QTreeWidgetItem(parent, ['script %s' % i, '1', '150'])
-
-        script = '   script %s' % i
-        item = QtGui.QTreeWidgetItem(parent, [script, '1', '150'])
-
-        self.treeWidget.setItemWidget(item, 0, MyWidget(val=script))
+        item = QtGui.QTreeWidgetItem(parent, ['script %s' % i, '1', '150'])
 
         self.treeWidget.setCurrentItem(item)
         self.treeWidget.expandAll()
@@ -467,5 +334,6 @@ if __name__ == '__main__':
     gui = TheUI()
     gui.show()
     app.exec_()
-
 ```
+
+
